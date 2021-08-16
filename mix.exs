@@ -6,6 +6,8 @@ defmodule GeoStreamData.MixProject do
       app: :geo_stream_data,
       version: "0.1.0",
       elixir: "~> 1.7",
+      description: description(),
+      package: package(),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases()
@@ -25,7 +27,8 @@ defmodule GeoStreamData.MixProject do
       {:geo, "~> 3.0"},
       {:jason, "~> 1.2", only: [:dev, :test]},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
 
@@ -38,6 +41,21 @@ defmodule GeoStreamData.MixProject do
         "credo",
         "dialyzer"
       ]
+    ]
+  end
+
+  defp description do
+    """
+    Library for generating geospatial data for property testing.  
+    """
+  end
+
+  defp package do
+    [
+      files: ["lib/geo_stream_data.ex", "lib/geo_stream_data", "mix.exs", "README*"],
+      maintainers: ["Powell Kinney"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/pkinney/geo_stream_data"}
     ]
   end
 end
