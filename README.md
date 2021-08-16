@@ -1,7 +1,7 @@
 # GeoStreamData
 
 
-[![Build Status](https://github.com/pkinney/geo_stream_data/actions/workflows/ci.yaml/badge.svg)
+![Build Status](https://github.com/pkinney/geo_stream_data/actions/workflows/ci.yaml/badge.svg)
 [![Hex.pm](https://img.shields.io/hexpm/v/geo_stream_data.svg)](https://hex.pm/packages/geo_stream_data)
 
 `GeoStreamData` is a library for generating geospatial data for property testing.  
