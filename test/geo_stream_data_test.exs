@@ -1,4 +1,5 @@
 defmodule GeoStreamDataTest do
+  @moduledoc false
   use ExUnit.Case
   use ExUnitProperties
 
@@ -19,6 +20,14 @@ defmodule GeoStreamDataTest do
     check all env <- envelope(),
               geo <- GeoStreamData.geometry(env) do
       assert Envelope.contains?(env, Envelope.from_geo(geo))
+    end
+  end
+
+  property "generates a point in a given envelope" do
+    check all point <- GeoStreamData.point(%{min_x: 0, max_x: 10, min_y: -5, max_y: 15}) do
+      %Geo.Point{coordinates: {x, y}} = point
+      assert x >= 0 and x <= 10
+      assert y >= -5 and y <= 15
     end
   end
 
