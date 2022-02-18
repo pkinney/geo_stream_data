@@ -13,7 +13,7 @@ You can learn more about how to use `StreamData` and `ExUnitProperties` [here](h
 ```elixir
 def deps do
   [
-    {:geo_stream_data, "~> 0.1.0"}
+    {:geo_stream_data, "~> 0.2"}
   ]
 end
 ```
@@ -58,6 +58,18 @@ property "A LineString contains a subset of its points" do
             b <- integer(2..(length(line1.coordinates) - a)) do
     line2 = %Geo.LineString{coordinates: Enum.slice(line1.coordinates, a..(a + b))}
     assert Topo.contains?(line1, line2)
+  end
+end
+```
+
+And each can be passed a map representing an envelope within which the generated geometries should be contained:
+
+```elixir
+property "generates a point in a given envelope" do
+  check all point <- GeoStreamData.point(%{min_x: 0, max_x: 10, min_y: -5, max_y: 15}) do
+    %Geo.Point{coordinates: {x, y}} = point
+    assert x >= 0 and x <= 10
+    assert y >= -5 and y <= 15
   end
 end
 ```
