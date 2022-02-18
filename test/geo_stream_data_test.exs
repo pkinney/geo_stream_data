@@ -15,6 +15,13 @@ defmodule GeoStreamDataTest do
     end
   end
 
+  property "generates a geometry in a given envelope" do
+    check all env <- envelope(),
+              geo <- GeoStreamData.geometry(env) do
+      assert Envelope.contains?(env, Envelope.from_geo(geo))
+    end
+  end
+
   property "generates a simple geometry" do
     check all geo <- GeoStreamData.geometry() do
       assert GeoStreamData.Utils.simple?(geo)
@@ -49,5 +56,23 @@ defmodule GeoStreamDataTest do
       assert length(geo.coordinates |> List.first()) >= 4
       assert GeoStreamData.Utils.simple?(geo)
     end
+  end
+
+  def envelope() do
+    # {uniq_list_of(integer(-10_000..10_000), length: 2),
+    #  uniq_list_of(integer(-10_000..10_000), length: 2)}
+    uniq_list_of(float(min: -10_000, max: 10_000), length: 2)
+    |> list_of(length: 2)
+    |> bind(fn [x, y] ->
+      {min_x, max_x} = Enum.min_max(x)
+      {min_y, max_y} = Enum.min_max(y)
+
+      constant(%Envelope{
+        min_x: min_x,
+        max_x: max_x,
+        min_y: min_y,
+        max_y: max_y
+      })
+    end)
   end
 end

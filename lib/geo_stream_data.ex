@@ -7,6 +7,8 @@ defmodule GeoStreamData do
 
   # use ExUnitProperties
 
+  @type envelope() :: %{min_x: number(), max_x: number(), min_y: number(), max_y: number()}
+
   @type geometry_type() ::
           Geo.Point.t()
           | Geo.LineString.t()
@@ -16,38 +18,39 @@ defmodule GeoStreamData do
           | Geo.MultiPolygon.t()
 
   @geometry_types ~w(point line_string polygon multi_point multi_line_string multi_polygon)a
+  @default_env %{min_x: -180, max_x: 180, min_y: -90, max_y: 90}
 
-  @spec geometry() :: StreamData.t(geometry_type())
-  def geometry() do
+  @spec geometry(envelope()) :: StreamData.t(geometry_type())
+  def geometry(env \\ @default_env) do
     StreamData.bind(StreamData.member_of(@geometry_types), fn
-      :point -> point()
-      :line_string -> line_string()
-      :polygon -> polygon()
-      :multi_point -> multi_point()
-      :multi_line_string -> multi_line_string()
-      :multi_polygon -> multi_polygon()
+      :point -> point(env)
+      :line_string -> line_string(env)
+      :polygon -> polygon(env)
+      :multi_point -> multi_point(env)
+      :multi_line_string -> multi_line_string(env)
+      :multi_polygon -> multi_polygon(env)
     end)
   end
 
-  @spec point_tuple() :: StreamData.t({number(), number()})
-  def point_tuple() do
-    StreamData.bind(StreamData.float(min: -180, max: 180), fn x ->
-      StreamData.bind(StreamData.float(min: -90, max: 90), fn y ->
-        StreamData.constant({x, y})
+  @spec point_tuple(envelope()) :: StreamData.t({number(), number()})
+  def point_tuple(env \\ @default_env) do
+    StreamData.bind(StreamData.float(min: env.min_x, max: env.max_x), fn x ->
+      StreamData.bind(StreamData.float(min: env.min_y, max: env.max_y), fn y ->
+        StreamData.constant({x, y} |> enforce_env(env))
       end)
     end)
   end
 
-  @spec point() :: StreamData.t(Geo.Point.t())
-  def point() do
-    StreamData.bind(point_tuple(), fn point ->
+  @spec point(envelope()) :: StreamData.t(Geo.Point.t())
+  def point(env \\ @default_env) do
+    StreamData.bind(point_tuple(env), fn point ->
       %Geo.Point{coordinates: point} |> StreamData.constant()
     end)
   end
 
-  @spec line_string() :: StreamData.t(Geo.LineString.t())
-  def line_string() do
-    StreamData.uniq_list_of(point_tuple(), min_length: 3)
+  @spec line_string(envelope()) :: StreamData.t(Geo.LineString.t())
+  def line_string(env \\ @default_env) do
+    StreamData.uniq_list_of(point_tuple(env), min_length: 3)
     |> StreamData.bind_filter(fn points ->
       sorted = points |> sort_radially() |> shift_random() |> reverse_sometimes()
 
@@ -61,9 +64,9 @@ defmodule GeoStreamData do
     end)
   end
 
-  @spec polygon() :: StreamData.t(Geo.Polygon.t())
-  def polygon() do
-    StreamData.uniq_list_of(point_tuple(), min_length: 3)
+  @spec polygon(envelope()) :: StreamData.t(Geo.Polygon.t())
+  def polygon(env \\ @default_env) do
+    StreamData.uniq_list_of(point_tuple(env), min_length: 3)
     |> StreamData.bind_filter(fn points ->
       sorted = points |> sort_radially() |> shift_random()
 
@@ -77,27 +80,27 @@ defmodule GeoStreamData do
     end)
   end
 
-  @spec multi_point() :: StreamData.t(Geo.MultiPoint.t())
-  def multi_point() do
-    StreamData.list_of(point_tuple(), min_length: 1)
+  @spec multi_point(envelope()) :: StreamData.t(Geo.MultiPoint.t())
+  def multi_point(env \\ @default_env) do
+    StreamData.list_of(point_tuple(env), min_length: 1)
     |> StreamData.bind(fn points ->
       %Geo.MultiPoint{coordinates: points}
       |> StreamData.constant()
     end)
   end
 
-  @spec multi_line_string() :: StreamData.t(Geo.MultiLineString.t())
-  def multi_line_string() do
-    StreamData.list_of(line_string(), min_length: 1)
+  @spec multi_line_string(envelope()) :: StreamData.t(Geo.MultiLineString.t())
+  def multi_line_string(env \\ @default_env) do
+    StreamData.list_of(line_string(env), min_length: 1)
     |> StreamData.bind(fn line_strings ->
       %Geo.MultiLineString{coordinates: Enum.map(line_strings, & &1.coordinates)}
       |> StreamData.constant()
     end)
   end
 
-  @spec multi_polygon() :: StreamData.t(Geo.MultiPolygon.t())
-  def multi_polygon() do
-    StreamData.list_of(polygon(), min_length: 1)
+  @spec multi_polygon(envelope()) :: StreamData.t(Geo.MultiPolygon.t())
+  def multi_polygon(env \\ @default_env) do
+    StreamData.list_of(polygon(env), min_length: 1)
     |> StreamData.bind(fn polygons ->
       %Geo.MultiPolygon{coordinates: Enum.map(polygons, & &1.coordinates)}
       |> StreamData.constant()
@@ -112,7 +115,7 @@ defmodule GeoStreamData do
     points |> Enum.sort_by(&angle(&1, center))
   end
 
-  def angle({x, y}, {cx, cy}), do: {do_angle(cx - x, cy - y), cy - y}
+  defp angle({x, y}, {cx, cy}), do: {do_angle(cx - x, cy - y), cy - y}
 
   defp do_angle(dx, dy) when dx == 0 and dy < 0, do: 3 * :math.pi() / 2.0
   defp do_angle(dx, _) when dx == 0, do: :math.pi() / 2.0
@@ -136,5 +139,12 @@ defmodule GeoStreamData do
     |> Tuple.to_list()
     |> Enum.reverse()
     |> List.flatten()
+  end
+
+  # Occasionally, StreamData's float generator generates a float that is outside of the min/max
+  # provide due to rounding differences.  This just ensures that the points generated stay inside
+  # the given envelope.
+  defp enforce_env({x, y}, env) do
+    {x |> min(env.max_x) |> max(env.min_x), y |> min(env.max_y) |> max(env.min_y)}
   end
 end
