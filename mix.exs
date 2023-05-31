@@ -4,7 +4,7 @@ defmodule GeoStreamData.MixProject do
   def project do
     [
       app: :geo_stream_data,
-      version: "0.2.0",
+      version: "0.2.1",
       elixir: "~> 1.7",
       description: description(),
       package: package(),
@@ -22,7 +22,7 @@ defmodule GeoStreamData.MixProject do
 
   defp deps do
     [
-      {:seg_seg, "~> 0.1.0"},
+      {:seg_seg, "~> 0.1 or ~> 1.0"},
       {:stream_data, "~> 0.5"},
       {:geo, "~> 3.0"},
       {:envelope, "~> 1.4", only: :test},
